@@ -36,6 +36,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# 삭제 대기 중인 임시 파일 (검토 후 직접 삭제)
+/trash-can
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
