@@ -1,36 +1,49 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# HR 리크루팅 봇
 
-## Getting Started
+채용팀의 반복 업무(공고 작성, 이력서 스크리닝, 면접 일정 조율, 처우안 산정, 채용 현황 파악)를 도와주는 사내 채용 지원 도구입니다. AI/자동화는 초안 작성과 1차 분류까지만 수행하며, **최종 합격·불합격과 처우 확정은 항상 담당자가 결정**합니다.
 
-First, run the development server:
+> 이 저장소는 학습·데모 목적의 PoC(Proof of Concept)입니다. 실제 운영 환경에 적용하려면 데이터베이스 도입 등 추가 작업이 필요합니다.
+
+## 주요 기능
+
+| 기능 | 설명 |
+|---|---|
+| 📊 채용 현황 대시보드 | 스크리닝·면접 진행 상황, ATS 연동 공고 현황을 한 화면에서 확인 |
+| 📝 이력서 1차 스크리닝 | HR이 정한 자격요건 기준으로 적합/확인필요/부적합 자동 분류 (최종 판단은 담당자) |
+| 📅 면접 일정 조율 | 지원자·현업 양쪽의 가능 시간대를 모아 담당자 승인 절차로 일정 확정 |
+| 💰 처우안 산정 | 이력서·건강보험 자격득실확인서·급여명세서(PDF)를 업로드하면 경력·연봉을 자동 계산해 채용품의 엑셀 생성. 스캔본은 OCR로 자동 보완 |
+| 🔗 ATS 연동 | 나인하이어(Ninehire) 채용 공고를 읽기 전용으로 실시간 조회 |
+| 🔐 로그인·권한 분리 | Supabase 인증. 관리자 / 일반 담당자 두 역할로 민감 데이터(재직자 정보, 인사마스터, ATS 연동 설정) 접근을 분리 |
+
+## 기술 스택
+
+- **Next.js 16** (App Router) · React 19 · TypeScript · Tailwind CSS 4
+- **Supabase** — 인증(이메일/비밀번호), 역할 기반 접근 제어
+- **pdf-parse / tesseract.js** — PDF 텍스트 추출 및 스캔본 OCR (서버 내부 처리, 외부 전송 없음)
+- **exceljs** — 처우안 결과를 엑셀 파일로 생성
+
+## 프로젝트 문서
+
+- [PRD.md](./PRD.md) — 서비스 기획서 (배경, 목표, 기능 범위, 보안·권한 정책)
+- [CLAUDE.md](./CLAUDE.md) — 프로젝트 개발 규칙
+
+## 로컬 실행
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`http://localhost:3000` 에서 확인할 수 있습니다. 로그인 및 외부 연동을 사용하려면 아래 환경변수가 필요합니다 (`.env.local` 파일에 설정, 저장소에는 포함되어 있지 않습니다).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| 변수 | 용도 |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase 프로젝트 URL |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase 공개 키 (로그인용) |
+| `NINEHIRE_API_KEY` | 나인하이어 ATS 연동 키 (선택) |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 데이터 처리 원칙
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- 지원자 서류(이력서·급여명세서 등)는 요청 처리 중에만 메모리에서 다루고 서버에 저장하지 않습니다.
+- 스캔본 OCR은 서버 내부(tesseract.js)에서 처리하며 외부 클라우드로 이미지를 전송하지 않습니다.
+- 자세한 보안·개인정보 처리 방침은 [PRD.md 7)](./PRD.md#7-보안개인정보-검토)를 참고하세요.

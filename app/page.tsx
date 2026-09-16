@@ -2,6 +2,7 @@ import Link from "next/link";
 import { DonutChart, FunnelChart, Legend, StackedBar } from "./components/charts";
 import { requireUser } from "./lib/auth/guard";
 import { elapsedLabel, isOverdue } from "./lib/interview";
+import { fetchAllJobs } from "./lib/ninehire";
 import { buildProbationSchedule } from "./lib/schedule";
 import { listInterviews, listScreenings, newHires, positions } from "./lib/store";
 import type { CoordinationStatus, ScreeningVerdict } from "./lib/types";
@@ -109,6 +110,25 @@ export default async function DashboardPage() {
   const probations = newHires
     .map((hire) => buildProbationSchedule(hire))
     .sort((a, b) => a.nextInDays - b.nextInDays);
+
+  // ATS(나인하이어) 공고 조회는 관리자 전용 기능이므로 관리자일 때만 불러온다
+  const atsResult = isAdmin ? await fetchAllJobs() : null;
+  const atsJobs = atsResult?.ok ? atsResult.data : [];
+  const atsInProgress = atsJobs.filter((job) => job.statusCode === "in_progress").length;
+  const atsClosed = atsJobs.length - atsInProgress;
+
+  const atsByDept = Object.values(
+    atsJobs.reduce<Record<string, { department: string; total: number; inProgress: number }>>(
+      (acc, job) => {
+        const dept = job.affiliation ?? "소속 미지정";
+        acc[dept] ??= { department: dept, total: 0, inProgress: 0 };
+        acc[dept].total += 1;
+        if (job.statusCode === "in_progress") acc[dept].inProgress += 1;
+        return acc;
+      },
+      {},
+    ),
+  ).sort((a, b) => b.total - a.total);
 
   return (
     <div className="space-y-6">
@@ -366,11 +386,83 @@ export default async function DashboardPage() {
         </Link>
       </SectionCard>
 
-      {/* 수습평가 대상자는 지원자가 아닌 재직 직원 정보이므로 관리자에게만 보여준다 */}
+      {/* 재직자 정보·ATS 연동 현황은 관리자에게만 보여준다 */}
       {!isAdmin && (
         <section className="rounded-lg border border-slate-200 bg-white p-5 text-sm text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
-          재직자 관련 정보(수습평가 대상자 등)는 관리자만 조회할 수 있습니다.
+          재직자 관련 정보(수습평가 대상자 등)와 ATS 연동 공고 현황은 관리자만 조회할 수
+          있습니다.
         </section>
+      )}
+
+      {isAdmin && (
+      <SectionCard
+        title="ATS(나인하이어) 공고 현황"
+        description="실제 나인하이어에 등록된 채용 공고를 부서별로 집계합니다."
+      >
+        {!atsResult?.ok ? (
+          <p className="text-sm text-rose-600 dark:text-rose-400">
+            {atsResult?.message ?? "ATS 연동 정보를 불러오지 못했습니다."} 자세한 내용은{" "}
+            <Link href="/integrations" className="underline">
+              ATS 연동 화면
+            </Link>
+            에서 확인해 주세요.
+          </p>
+        ) : (
+          <>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="rounded bg-slate-50 p-3 text-sm dark:bg-slate-800">
+                <p className="text-slate-500 dark:text-slate-400">전체 공고</p>
+                <p className="text-lg font-bold">{atsJobs.length}건</p>
+              </div>
+              <div className="rounded bg-slate-50 p-3 text-sm dark:bg-slate-800">
+                <p className="text-slate-500 dark:text-slate-400">진행중</p>
+                <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
+                  {atsInProgress}건
+                </p>
+              </div>
+              <div className="rounded bg-slate-50 p-3 text-sm dark:bg-slate-800">
+                <p className="text-slate-500 dark:text-slate-400">마감</p>
+                <p className="text-lg font-bold text-slate-500 dark:text-slate-400">
+                  {atsClosed}건
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4 overflow-x-auto">
+              <table className="w-full min-w-[480px] text-sm">
+                <thead className="border-b border-slate-200 text-left text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
+                  <tr>
+                    <th className="px-3 py-2 font-medium">부서(소속)</th>
+                    <th className="px-3 py-2 font-medium">전체 공고</th>
+                    <th className="px-3 py-2 font-medium">진행중</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {atsByDept.map((row) => (
+                    <tr
+                      key={row.department}
+                      className="border-b border-slate-100 last:border-0 dark:border-slate-800"
+                    >
+                      <td className="px-3 py-3 font-medium">{row.department}</td>
+                      <td className="px-3 py-3">{row.total}건</td>
+                      <td className="px-3 py-3 text-emerald-600 dark:text-emerald-400">
+                        {row.inProgress}건
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <Link
+              href="/integrations"
+              className="mt-3 inline-block text-sm text-blue-600 hover:underline dark:text-blue-400"
+            >
+              전체 공고 목록 보기 →
+            </Link>
+          </>
+        )}
+      </SectionCard>
       )}
 
       {isAdmin && (

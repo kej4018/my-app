@@ -39,6 +39,12 @@ yarn-error.log*
 # 삭제 대기 중인 임시 파일 (검토 후 직접 삭제)
 /trash-can
 
+# OCR(tesseract.js)이 실행 중 내려받는 언어 모델 파일 (용량이 커 저장소에 올리지 않는다)
+*.traineddata
+
+# bkit 플러그인 로컬 상태 (프로젝트 산출물이 아님)
+/.bkit
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

@@ -94,6 +94,27 @@ export function parsePayslip(
   return { month, items: finalItems, total, include: true };
 }
 
+const PAYSLIP_PAGE_MARKER = /지급\s*년월|지급내역/;
+
+/**
+ * 급여명세서 파일 1개 안에 여러 달치가 페이지별로 이어붙어 있을 수 있으므로,
+ * "지급년월"이나 "지급내역"이 있는 페이지만 골라 페이지마다 한 달씩 파싱한다.
+ * (파일 1개 = 1개월이라고 가정하지 않는다)
+ */
+export function parsePayslipDocument(
+  pages: { text: string; tables: string[][][] }[],
+  fileLabel: string,
+): PayslipMonth[] {
+  const relevantPages = pages.filter((page) => PAYSLIP_PAGE_MARKER.test(page.text));
+  const targetPages = relevantPages.length > 0 ? relevantPages : pages;
+
+  return targetPages.map((page, index) => {
+    const label =
+      targetPages.length > 1 ? `${fileLabel} (${index + 1}/${targetPages.length}페이지)` : fileLabel;
+    return parsePayslip(page.text, label, page.tables);
+  });
+}
+
 /**
  * 여러 달의 지급액 계를 비교해 유난히 큰 달(연차수당 일시 정산 등 일회성 포함 가능성)에
  * 담당자가 확인하도록 안내 문구를 붙인다. 자동으로 제외하지는 않는다.
