@@ -1,0 +1,8 @@
+# Vercel CLI는 .gitignore를 따르지 않고 기본적으로 .env 파일을 그대로 업로드하므로
+# 반드시 이 파일에서 명시적으로 제외해야 한다.
+.env
+.env.*
+*.traineddata
+.bkit
+trash-can
+node_modules
